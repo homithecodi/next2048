@@ -6,9 +6,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Gamepad2,
   RotateCcw,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useGamepad } from "../_hooks/useGamepad";
+import { useHaptics } from "../_hooks/useHaptics";
 
 const SIZE = 4;
 const TARGET = 2048;
@@ -33,6 +36,7 @@ type GameState = {
   won: boolean;
   merges: Merge[];
   nextId: number;
+  presses: number;
 };
 
 type GameAction =
@@ -84,6 +88,7 @@ function createInitialState(): GameState {
     won: false,
     merges: [],
     nextId: 0,
+    presses: 0,
   };
 }
 
@@ -205,9 +210,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case "move": {
       if (state.status !== "playing") return state;
+      const presses = state.presses + 1;
       const { board, gained, merges } = applyMove(state.board, action.direction);
       if (boardsEqual(board, state.board)) {
-        return canMove(board) ? state : { ...state, status: "over" };
+        return canMove(board)
+          ? { ...state, presses }
+          : { ...state, presses, status: "over" };
       }
       const next = addRandomTile(board, state.nextId);
       const score = state.score + gained;
@@ -223,6 +231,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         won,
         merges,
         nextId: state.nextId + 1,
+        presses,
       };
     }
   }
@@ -308,10 +317,38 @@ export default function Game2048() {
   const gridRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const placedRef = useRef(new Map<number, Placed>());
+  const lastBoardRef = useRef(state.board);
+  const { pulse, attach } = useHaptics();
+
+  const restart = () => {
+    pulse("start");
+    dispatch({ type: "restart" });
+  };
+
+  const pad = useGamepad({
+    onDirection: (direction) => dispatch({ type: "move", direction }),
+    onConfirm: () => {
+      if (state.status === "won") dispatch({ type: "resume" });
+      else if (state.status === "over") restart();
+    },
+    onRestart: restart,
+    onActuator: attach,
+  });
 
   useEffect(() => {
     dispatch({ type: "seed" });
   }, []);
+
+  useEffect(() => {
+    const previous = lastBoardRef.current;
+    lastBoardRef.current = state.board;
+    if (state.presses === 0) return;
+    if (previous === state.board) pulse("blocked");
+    else if (state.status === "won") pulse("win");
+    else if (state.status === "over") pulse("gameover");
+    else if (state.merges.length > 0) pulse("merge");
+    else pulse("move");
+  }, [state.presses, state.status, state.board, state.merges, pulse]);
 
   useLayoutEffect(() => {
     const grid = gridRef.current;
@@ -426,21 +463,32 @@ export default function Game2048() {
         return;
       }
       if (event.key === "r" || event.key === "R") {
+        pulse("start");
         dispatch({ type: "restart" });
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [pulse]);
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
       <div className="flex w-full max-w-80 items-end justify-between">
         <div>
           <p className="text-3xl font-bold">2048</p>
-          <p className="text-xs opacity-60">Arrow keys to play, R to restart</p>
+          {pad.connected ? (
+            <p
+              title={pad.label}
+              className="flex items-center justify-center gap-1.5 text-xs opacity-60"
+            >
+              <Gamepad2 size={13} className="shrink-0" />
+              D-pad or left stick, Start restarts
+            </p>
+          ) : (
+            <p className="text-xs opacity-60">Arrow keys to play, R to restart</p>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Stat label="Score" value={state.score} />
           <Stat label="Best" value={state.best} />
         </div>
@@ -490,11 +538,7 @@ export default function Game2048() {
                   Keep going
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => dispatch({ type: "restart" })}
-                className={BUTTON_STYLE}
-              >
+              <button type="button" onClick={restart} className={BUTTON_STYLE}>
                 New game
               </button>
             </div>
@@ -518,7 +562,7 @@ export default function Game2048() {
 
       <button
         type="button"
-        onClick={() => dispatch({ type: "restart" })}
+        onClick={restart}
         className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold transition hover:scale-105 active:scale-95 dark:bg-gray-800"
       >
         <RotateCcw size={16} />
