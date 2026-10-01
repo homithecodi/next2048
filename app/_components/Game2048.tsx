@@ -9,9 +9,10 @@ import {
   Gamepad2,
   RotateCcw,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { useGamepad } from "../_hooks/useGamepad";
 import { useHaptics } from "../_hooks/useHaptics";
+import { useSwipe } from "../_hooks/useSwipe";
 
 const SIZE = 4;
 const TARGET = 2048;
@@ -316,8 +317,10 @@ export default function Game2048() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
   const gridRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
   const placedRef = useRef(new Map<number, Placed>());
   const lastBoardRef = useRef(state.board);
+  const [coarse, setCoarse] = useState(false);
   const { pulse, attach } = useHaptics();
 
   const restart = () => {
@@ -338,6 +341,16 @@ export default function Game2048() {
   useEffect(() => {
     dispatch({ type: "seed" });
   }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia("(any-pointer: coarse)");
+    const sync = () => setCoarse(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  useSwipe(boardRef, (direction) => dispatch({ type: "move", direction }));
 
   useEffect(() => {
     const previous = lastBoardRef.current;
@@ -485,7 +498,9 @@ export default function Game2048() {
               D-pad or left stick, Start restarts
             </p>
           ) : (
-            <p className="text-xs opacity-60">Arrow keys to play, R to restart</p>
+            <p className="text-xs opacity-60">
+              {coarse ? "Swipe the board to play" : "Arrow keys to play, R to restart"}
+            </p>
           )}
         </div>
         <div className="flex shrink-0 gap-2">
@@ -494,7 +509,10 @@ export default function Game2048() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-80 rounded-xl bg-[#bbada0] p-2 dark:bg-[#3a3a38]">
+      <div
+        ref={boardRef}
+        className="relative w-full max-w-80 touch-none rounded-xl bg-[#bbada0] p-2 dark:bg-[#3a3a38]"
+      >
         <div ref={gridRef} className="grid grid-cols-4 gap-2">
           {state.board.map((row, r) =>
             row.map((tile, c) => (
