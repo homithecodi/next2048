@@ -4,11 +4,10 @@ const RUNTIME_CACHE = `next-2048-runtime-${VERSION}`;
 const OWN_CACHES = [SHELL_CACHE, RUNTIME_CACHE];
 
 // The site can be mounted under a sub-path (GitHub Pages), so every URL is
-// resolved against the directory this worker was served from.
-const BASE_PATH = new URL(self.location.pathname).pathname.replace(
-  /\/sw\.js$/,
-  ""
-);
+// resolved against the directory this worker was served from. `href` is the
+// seed because `location.pathname` is relative and `new URL` rejects it.
+const SELF_URL = new URL(self.location.href);
+const BASE_PATH = SELF_URL.pathname.replace(/\/[^/]+$/, "");
 
 const OFFLINE_FALLBACK = `${BASE_PATH}/`;
 
@@ -26,7 +25,7 @@ const IMMUTABLE_PREFIXES = [
   `${BASE_PATH}/icons/`,
 ];
 
-const SELF_PATH = `${BASE_PATH}/sw.js`;
+const SELF_PATH = SELF_URL.pathname;
 
 const CACHEABLE_EXTENSIONS = new Set([
   ".css",
