@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 
-const SERVICE_WORKER_URL = "/sw.js";
+// Inlined at build time; empty locally and set to the repository sub-path
+// (e.g. "/next2048") when exporting for GitHub Pages.
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const SERVICE_WORKER_URL = `${BASE_PATH}/sw.js`;
+const SERVICE_WORKER_SCOPE = `${BASE_PATH}/`;
 
 // Caching hashed dev chunks makes edits appear stale, so dev stays off by
 // default. Set NEXT_PUBLIC_ENABLE_SW=1 to exercise PWA behaviour locally.
@@ -18,7 +22,7 @@ export default function ServiceWorkerRegister() {
     const register = () => {
       navigator.serviceWorker
         .register(SERVICE_WORKER_URL, {
-          scope: "/",
+          scope: SERVICE_WORKER_SCOPE,
           updateViaCache: "none",
         })
         .catch(() => {});

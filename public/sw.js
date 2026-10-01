@@ -3,18 +3,30 @@ const SHELL_CACHE = `next-2048-shell-${VERSION}`;
 const RUNTIME_CACHE = `next-2048-runtime-${VERSION}`;
 const OWN_CACHES = [SHELL_CACHE, RUNTIME_CACHE];
 
-const OFFLINE_FALLBACK = "/";
+// The site can be mounted under a sub-path (GitHub Pages), so every URL is
+// resolved against the directory this worker was served from.
+const BASE_PATH = new URL(self.location.pathname).pathname.replace(
+  /\/sw\.js$/,
+  ""
+);
+
+const OFFLINE_FALLBACK = `${BASE_PATH}/`;
 
 const PRECACHE_URLS = [
-  "/",
-  "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/icon-maskable-192.png",
-  "/icons/icon-maskable-512.png",
+  OFFLINE_FALLBACK,
+  `${BASE_PATH}/manifest.webmanifest`,
+  `${BASE_PATH}/icons/icon-192.png`,
+  `${BASE_PATH}/icons/icon-512.png`,
+  `${BASE_PATH}/icons/icon-maskable-192.png`,
+  `${BASE_PATH}/icons/icon-maskable-512.png`,
 ];
 
-const IMMUTABLE_PREFIXES = ["/_next/static/", "/icons/"];
+const IMMUTABLE_PREFIXES = [
+  `${BASE_PATH}/_next/static/`,
+  `${BASE_PATH}/icons/`,
+];
+
+const SELF_PATH = `${BASE_PATH}/sw.js`;
 
 const CACHEABLE_EXTENSIONS = new Set([
   ".css",
@@ -69,7 +81,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname === "/sw.js") return;
+  if (url.pathname === SELF_PATH) return;
 
   if (request.mode === "navigate") {
     event.respondWith(handleNavigation(request));
