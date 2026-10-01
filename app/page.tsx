@@ -1,4 +1,5 @@
 import Game2048 from "./_components/Game2048";
+import InstallButton from "./_components/InstallButton";
 import ThemeToggle from "./_components/ThemeToggle";
 
 export default function Home() {
@@ -19,7 +20,10 @@ export default function Home() {
         <div className="space-y-6">
           <h1 className="text-4xl font-bold">Next 2048</h1>
 
-          <ThemeToggle />
+          <div className="flex items-center justify-center gap-3">
+            <InstallButton />
+            <ThemeToggle />
+          </div>
         </div>
 
         <Game2048 />
