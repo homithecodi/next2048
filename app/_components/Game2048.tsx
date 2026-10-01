@@ -10,6 +10,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { useBestScore } from "../_hooks/useBestScore";
 import { useGamepad } from "../_hooks/useGamepad";
 import { useHaptics } from "../_hooks/useHaptics";
 import { useSwipe } from "../_hooks/useSwipe";
@@ -322,6 +323,7 @@ export default function Game2048() {
   const lastBoardRef = useRef(state.board);
   const [coarse, setCoarse] = useState(false);
   const { pulse, attach } = useHaptics();
+  const best = useBestScore(state.best);
 
   const restart = () => {
     pulse("start");
@@ -505,7 +507,7 @@ export default function Game2048() {
         </div>
         <div className="flex shrink-0 gap-2">
           <Stat label="Score" value={state.score} />
-          <Stat label="Best" value={state.best} />
+          <Stat label="Best" value={best} />
         </div>
       </div>
 
